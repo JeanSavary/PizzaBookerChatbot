@@ -4,11 +4,6 @@ from flask import Flask, request, make_response, jsonify
 # initialize the flask app
 app = Flask(__name__)
 
-# default route
-@app.route('/')
-def hello_world():
-    return 'Hello World ! Becarful to the corona virus !!'
-
 # function for responses
 def results():
     # build a request object
@@ -28,4 +23,4 @@ def webhook():
 
 # run the app
 if __name__ == '__main__':
-   app.run(debug=True)
+    app.run(debug=True)
