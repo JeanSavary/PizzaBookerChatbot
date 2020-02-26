@@ -7,7 +7,7 @@ app = Flask(__name__)
 # default route
 @app.route('/')
 def hello_world():
-    return 'Hello World!'
+    return 'Hello World ! Becarful to the corona virus !!'
 
 # function for responses
 def results():
