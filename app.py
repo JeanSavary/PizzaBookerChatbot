@@ -4,7 +4,7 @@ import pandas as pd
 
 # initialize the flask app
 app = Flask(__name__)
-DATA = pd.read_csv('data/extended_pizzas.csv', sep = ';')
+DATA = pd.read_csv('data/pizzas.csv', sep = ';')
 
 # function for responses
 def results():
