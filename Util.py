@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from copy import deepcopy  #the use of deepcopy can be debated !!
 
+# A retravailler !! 
+
 class Util ():
 
     def pizza_with_ingredient(self, ingredient, DATA):
