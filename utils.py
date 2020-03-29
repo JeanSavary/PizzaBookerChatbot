@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from copy import deepcopy  #the use of deepcopy can be debated !!
+import re 
+from unidecode import unidecode 
 
 def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
     """ This function creates a dataFrame with booleans, True if the element (string) is inthe column col (string) of the dataframe d, else false
@@ -100,4 +102,18 @@ def format_list_for_message_client(list_data):
     list_data_string = list_data_string.replace('\"','')
     return (str(list_data_string))
 
+def search_by_name(pizza_data, input_text):
+    '''
+        Entrée possibles : "la berbère", "pizza 4 fromages", "pizza quatres fromages", singulier ou pluriel
+    '''
 
+    regex_pizza = r'(pizza(s)?\s)'
+    regex_quatres = r'quatre(s)?'
+
+    processed_input_text = re.sub(regex_pizza, '', input_text) #remove all unecessary words to better search pizza names in our dataset
+    processed_input_text = re.sub(regex_quatres, '4', processed_input_text) #transform words "quatre" and "quatres" to 4
+    processed_input_text = processed_input_text if processed_input_text[-1] != 's' else processed_input_text[:-1]
+
+    res_df = pizza_data[pizza_data.name.apply(lambda name : unidecode(processed_input_text.lower()) in unidecode(name.lower()))]
+    
+    return res_df

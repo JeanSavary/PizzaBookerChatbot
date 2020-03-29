@@ -2,17 +2,12 @@ from flask import Flask, request, make_response, jsonify
 import pandas as pd 
 import numpy as np
 from copy import deepcopy
-from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client,format_dict_booking
+from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name
 
 app = Flask(__name__)
 DATA = pd.read_csv('data/pizzas.csv', sep = ';')
 
 order = {}  # dict which stores the order of the client. Pizza names as keys and quantity as values. If the ingredients of the pizza are modified, the name of the pizza will be modified 'pizza bougar sans fromage'
-
-
-
-
-
 
 def results():
 
@@ -152,7 +147,6 @@ def results():
         req_output_contexts = req.get('queryResult').get('outputContexts')[0].get('parameters')
 
         req_is_pizza = len(req_parameters.get('meals')) == 0
-        print(req_is_pizza)
 
         if req_is_pizza : 
             if req_output_contexts.get('pizza-type.original')[0] in ['pizza', 'pizzas'] :
@@ -160,7 +154,9 @@ def results():
             
             else :
                 pizza_type = req_output_contexts.get('pizza-type.original')[0]
-                print(' '.join(map(lambda x : x.capitalize() , pizza_type.split())))
+                res = search_by_name(DATA, pizza_type)
+                return {'fulfillmentText': u'Parfaitement, nous proposons cette pizza !\n Voici sa description : {description}.\n\n Souhaitez-vous la commander ?'.format(description = res.description.tolist()[0])}
+
         else :
             return {'fulfillmentText': u'Malheureusement nous ne faisons pas ce type de plat ! Cependant, nous sommes spécialisés dans la confection de délicieuses pizzas !🍕Souhaitez-vous commander ?'}
     
