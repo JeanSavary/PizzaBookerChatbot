@@ -13,21 +13,21 @@ def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
             element = element[0].upper()+element[1:] 
             print("element", element)
             if "Viande" in element:
-                df_temp[element] = DATA["is_meat"]
+                df_temp[element] = df["is_meat"]
             elif element =="Alcool" or element =="Alcohol":
-                df_temp[element] = DATA["is_acohol"]
+                df_temp[element] = df["is_acohol"]
             elif "Sucre" in element or "Sucré" in element:  #formulation "in" instead of == to cope with conjugaison 'sucrée'
-                df_temp[element]=DATA["is_sugar"]
+                df_temp[element]=df["is_sugar"]
             elif "Salé" in element or "Sale" in element :  #it s a special ingredient, opposite of "sucré" but not in the list of ingredients
-                df_temp[element] = ~DATA["is_sugar"]
+                df_temp[element] = ~df["is_sugar"]
             elif "Végétarienne" in element or "Vegetarienne" in element :
-                df_temp[element] = ~DATA["is_meat"]      #the opposite 
+                df_temp[element] = ~df["is_meat"]      #the opposite 
             elif "Calzone" in element :
-                df_temp[element] = DATA["is_calzone"]
+                df_temp[element] = df["is_calzone"]
             elif "Crème fraîche" in element or "Base crème" in element or "Creme fraiche" in element or "Base creme" in element:
-                df_temp[element]= DATA['is_cream_base']
+                df_temp[element]= df['is_cream_base']
             elif "Base tomate" in element or "Base sauce tomate" in element:
-                df_temp[element] = ~DATA["is_cream_base"]
+                df_temp[element] = ~df["is_cream_base"]
             else :
                 print("case else", element)
                 df_temp[element]=df[col].apply(lambda x: True if (element in x or element[:-1] in x) else False) #element[:-1] for the case it s a plurial in the question
