@@ -28,6 +28,8 @@ def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
                 df_temp[element]= df['is_cream_base']
             elif "Base tomate" in element or "Base sauce tomate" in element:
                 df_temp[element] = ~df["is_cream_base"]
+            elif "Pimenté" in element or "Piment" in element :
+                df_temp[element]= df["is_spicy"]
             else :
                 print("case else", element)
                 df_temp[element]=df[col].apply(lambda x: True if (element in x or element[:-1] in x) else False) #element[:-1] for the case it s a plurial in the question
