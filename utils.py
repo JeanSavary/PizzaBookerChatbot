@@ -15,21 +15,23 @@ def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
             element = element[0].upper()+element[1:] 
             print("element", element)
             if "Viande" in element:
-                df_temp[element] = DATA["is_meat"]
+                df_temp[element] = df["is_meat"]
             elif element =="Alcool" or element =="Alcohol":
-                df_temp[element] = DATA["is_acohol"]
+                df_temp[element] = df["is_acohol"]
             elif "Sucre" in element or "Sucré" in element:  #formulation "in" instead of == to cope with conjugaison 'sucrée'
-                df_temp[element]=DATA["is_sugar"]
+                df_temp[element]=df["is_sugar"]
             elif "Salé" in element or "Sale" in element :  #it s a special ingredient, opposite of "sucré" but not in the list of ingredients
-                df_temp[element] = ~DATA["is_sugar"]
+                df_temp[element] = ~df["is_sugar"]
             elif "Végétarienne" in element or "Vegetarienne" in element :
-                df_temp[element] = ~DATA["is_meat"]      #the opposite 
+                df_temp[element] = ~df["is_meat"]      #the opposite 
             elif "Calzone" in element :
-                df_temp[element] = DATA["is_calzone"]
+                df_temp[element] = df["is_calzone"]
             elif "Crème fraîche" in element or "Base crème" in element or "Creme fraiche" in element or "Base creme" in element:
-                df_temp[element]= DATA['is_cream_base']
+                df_temp[element]= df['is_cream_base']
             elif "Base tomate" in element or "Base sauce tomate" in element:
-                df_temp[element] = ~DATA["is_cream_base"]
+                df_temp[element] = ~df["is_cream_base"]
+            elif "Pimenté" in element or "Piment" in element :
+                df_temp[element]= df["is_spicy"]
             else :
                 print("case else", element)
                 df_temp[element]=df[col].apply(lambda x: True if (element in x or element[:-1] in x) else False) #element[:-1] for the case it s a plurial in the question
@@ -47,6 +49,35 @@ def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
         df_return = pd.DataFrame(df_temp['sum'].apply(lambda x:True if x>=1 else False))  #ou inclusif, at least one of the ingredients
     print("df_return", df_return)
     return(df_return)
+
+def format_dict_booking(dict_order):
+    """This function converts the dictionary (order) into a string which will be displayed when the client books a command
+    dict_order : dictionary of the client's order, like {'carbonar':4, 'bougar':2}
+    """
+    text = ""
+    length = len(dict_order.keys())
+    list_length = [i for i in range(length)]
+    keys = list(dict_order.keys())
+    values = list(dict_order.values())
+    for i, key, value in zip(list_length, keys, values):
+        if length == 0 :  #normally this case shouldn t occur
+            return ('')
+
+        elif i == length-1 and value==1:  # end of the dic so add nothing at the end of the sentence (already a point in the fulfilment), value==1 means no 's' at the end of the key
+            text = text + str(int(value))+' '+key
+        elif i == length-1 and value>=2:  # end of the dic so add nothing at the end of the sentence (already a point in the fulfilment), case several so we add a 's'
+            text = text + str(int(value))+' '+key+'s'
+
+        elif length>=2 and i==length-2 and value==1:  #case there are several keys (pizzas) and we are at the second last element of the dic, we add "et"
+            text = text + str(int(value)) +' '+ key +' et '
+        elif length>=2 and i==length-2 and value>=2:  #case there are several keys (pizzas) and we are at the second last element of the dic, we add "et"
+            text = text + str(int(value)) +' '+ key +'s et '
+
+        elif length>=2 and i<=length-2 and value==1:
+            text = text + str(int(value)) +' '+ key +', '
+        elif length>=2 and i<=length-2 and value>=2:
+            text = text + str(int(value)) +' '+ key +'s, '
+    return (text)
 
 def select_bool_column(df_bool, df_data, col_data, bool):
     """ This function takes a df_bool (dataframe, one column with boolean values) and return the list of the values of a selected 
