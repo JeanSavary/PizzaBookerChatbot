@@ -10,15 +10,15 @@ def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
     nb_element = len(list_elements)
     df_temp = pd.DataFrame(index=df.index)
     for element in list_elements:
-        if col=='ingredients':  #because in the csv the first letter is upper, it doesn't apply for the case it s pizza
+        if col=='ingredients' :  #because in the csv the first letter is upper, it doesn't apply for the case it s pizza
             element = element.lower()
-            element = element[0].upper()+element[1:] 
+            element = element[0].upper()+element[1:]
             print("element", element)
             if "Viande" in element:
                 df_temp[element] = df["is_meat"]
             elif element =="Alcool" or element =="Alcohol":
                 df_temp[element] = df["is_acohol"]
-            elif "Sucre" in element or "Sucré" in element:  #formulation "in" instead of == to cope with conjugaison 'sucrée'
+            elif "Sucree" in element or "Sucré" in element:  #formulation "in" instead of == to cope with conjugaison 'sucrée'
                 df_temp[element]=df["is_sugar"]
             elif "Salé" in element or "Sale" in element :  #it s a special ingredient, opposite of "sucré" but not in the list of ingredients
                 df_temp[element] = ~df["is_sugar"]
@@ -41,20 +41,19 @@ def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
                 element = element.split(' ')[-1] #case it s 'pizza chipo', we keep just 'chipo'
             element = element[0].upper()+element[1:]
             df_temp[element]=df[col].apply(lambda x: True if (element in x or element[:-1] in x) else False) #element[:-1] for the case it s a plurial in the question
-    print('df_temmmmp', df_temp.shape, df_temp)
     df_temp['sum'] = df_temp.sum(axis=1)
     if conjonction =='addition':
         df_return = pd.DataFrame(df_temp['sum'].apply(lambda x:True if x==nb_element else False)) #all the ingredients are needed to select the pizza
     elif conjonction =='ou':
         df_return = pd.DataFrame(df_temp['sum'].apply(lambda x:True if x>=1 else False))  #ou inclusif, at least one of the ingredients
-    print("df_return", df_return)
     return(df_return)
 
 def format_dict_booking(dict_order):
-    """This function converts the dictionary (order) into a string which will be displayed when the client books a command
+    """
+    This function converts the dictionary (order) into a string which will be displayed when the client books a command
     dict_order : dictionary of the client's order, like {'carbonar':4, 'bougar':2}
     """
-    text = ""
+    text = ''
     length = len(dict_order.keys())
     list_length = [i for i in range(length)]
     keys = list(dict_order.keys())
@@ -66,17 +65,17 @@ def format_dict_booking(dict_order):
         elif i == length-1 and value==1:  # end of the dic so add nothing at the end of the sentence (already a point in the fulfilment), value==1 means no 's' at the end of the key
             text = text + str(int(value))+' '+key
         elif i == length-1 and value>=2:  # end of the dic so add nothing at the end of the sentence (already a point in the fulfilment), case several so we add a 's'
-            text = text + str(int(value))+' '+key+'s'
+            text = text + str(int(value))+' '+key.split()[0]+'s '+format_list_for_message_client(key.split()[1:]).replace(',','') #a 's' is added to pizza -> pizzas and the reste of the name of the pizza is added
 
         elif length>=2 and i==length-2 and value==1:  #case there are several keys (pizzas) and we are at the second last element of the dic, we add "et"
             text = text + str(int(value)) +' '+ key +' et '
         elif length>=2 and i==length-2 and value>=2:  #case there are several keys (pizzas) and we are at the second last element of the dic, we add "et"
-            text = text + str(int(value)) +' '+ key +'s et '
+            text = text + str(int(value)) +' '+ key.split()[0] +'s '+format_list_for_message_client(key.split()[1:]).replace(',','')+' et '
 
         elif length>=2 and i<=length-2 and value==1:
             text = text + str(int(value)) +' '+ key +', '
         elif length>=2 and i<=length-2 and value>=2:
-            text = text + str(int(value)) +' '+ key +'s, '
+            text = text + str(int(value)) +' '+ key.split()[0] +'s '+format_list_for_message_client(key.split()[1:]).replace(',','')+', '
     return (text)
 
 def select_bool_column(df_bool, df_data, col_data, bool):
