@@ -77,7 +77,7 @@ def format_dict_booking(dict_order):
             text = text + str(int(value)) +' '+ key +', '
         elif length>=2 and i<=length-2 and value>=2:
             text = text + str(int(value)) +' '+ key +'s, '
-    return (text)
+    return text
 
 def select_bool_column(df_bool, df_data, col_data, bool):
     """ This function takes a df_bool (dataframe, one column with boolean values) and return the list of the values of a selected 
@@ -103,14 +103,11 @@ def format_list_for_message_client(list_data):
     return (str(list_data_string))
 
 def search_by_name(pizza_data, input_text):
-    '''
-        Entrée possibles : "la berbère", "pizza 4 fromages", "pizza quatres fromages", singulier ou pluriel
-    '''
-
+ 
     regex_pizza = r'(pizza(s)?\s)'
     regex_quatres = r'quatre(s)?'
 
-    processed_input_text = re.sub(regex_pizza, '', input_text) #remove all unecessary words to better search pizza names in our dataset
+    processed_input_text = re.sub(regex_pizza, '', input_text) #remove all unnecessary words to better search pizza names in our dataset
     processed_input_text = re.sub(regex_quatres, '4', processed_input_text) #transform words "quatre" and "quatres" to 4
     processed_input_text = processed_input_text if processed_input_text[-1] != 's' else processed_input_text[:-1]
 

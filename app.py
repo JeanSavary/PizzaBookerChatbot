@@ -2,7 +2,7 @@ from flask import Flask, request, make_response, jsonify
 import pandas as pd 
 import numpy as np
 from copy import deepcopy
-from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name
+from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name, format_dict_booking
 
 app = Flask(__name__)
 DATA = pd.read_csv('data/pizzas.csv', sep = ';')
@@ -160,27 +160,68 @@ def results():
         else :
             return {'fulfillmentText': u'Malheureusement nous ne faisons pas ce type de plat ! Cependant, nous sommes spécialisés dans la confection de délicieuses pizzas !🍕Souhaitez-vous commander ?'}
     
-    # --- Booking
+    # --- Booking intent section
 
     elif req.get('queryResult').get('intent').get('displayName') == 'Booking':
+        order = {}
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
         list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
-        print("booking", list_pizza, list_quantity_pizza)
-        for i, pizza in enumerate(list_pizza):
-            order[pizza]=list_quantity_pizza[i]
-        print("order", order)
-        return {'fulfillmentText': u'Très bien, nous avons enregistré votre commande, qui est {}. Souhaitez-vous modifier la composition d\'une pizza ?'.format(format_dict_booking(order))}
-
-
-
-
-
-    # --- PizzaModification intent section
-
-    # to do : update du dictionnaire order, afin de tenir compte des modifications d'ingrédients
         
+        for i, pizza in enumerate(list_pizza):
+            db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
+            order[db_pizza_name] = int(list_quantity_pizza[i])
+            
+        print("order", order)
+        return {'fulfillmentText': u'Très bien, nous avons enregistré votre commande, qui est {}. Souhaitez-vous modifier la composition de pizza(s) ?'.format(format_dict_booking(order))}
+
+    # --- AddIngredients intent section
+
+    elif req.get('queryResult').get('intent').get('displayName') == 'AddIngredients':
+        ingredient_to_add = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
+        pizza_to_modify = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
+
+        pizza_to_modify = search_by_name(DATA, pizza_to_modify).name.tolist()[0]
+
+        try :
+            order[pizza_to_modify] -= 1
+            if order[pizza_to_modify] == 0 :
+                del order[pizza_to_modify]
+
+            order[pizza_to_modify + ' avec %s'%ingredient_to_add] = 1
+
+            print('Modification applied : {}'.format(order))
+
+            return {'fulfillmentText': u"Votre modification a bien été appliquée. Souhaitez-vous modifier la composition d'une autre pizza (si oui précisez le type de modification, le nom de la pizza et l'ingrédient en question) ou bien passer à la validation de votre commande."}
+
+        except :
+            return {'fulfillmentText': u"Votre commande ne contient pas la {}. Veuillez sélectionner une pizza déjà présente dans votre commande.".format(pizza_to_modify)}
+        
+    # to do : update du dictionnaire order, afin de tenir compte des modifications d'ingrédients
     
-# create a route for webhook
+
+    # --- RemoveIngredients intent section
+    
+    elif req.get('queryResult').get('intent').get('displayName') == 'RemoveIngredients':
+        
+        ingredient_to_remove = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
+        pizza_to_modify = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
+
+        pizza_to_modify = search_by_name(DATA, pizza_to_modify).name.tolist()[0]
+    
+        try :
+            order[pizza_to_modify] -= 1
+            if order[pizza_to_modify] == 0 :
+                del order[pizza_to_modify]
+
+            order[pizza_to_modify + ' sans %s'%ingredient_to_add] = 1
+
+            print('Modification applied : {}'.format(order))
+
+            return {'fulfillmentText': u"Votre modification a bien été appliquée. Souhaitez-vous modifier la composition d'une autre pizza (si oui précisez le type de modification, le nom de la pizza et l'ingrédient en question) ou bien passer à la validation de votre commande."}
+
+        except :
+            return {'fulfillmentText': u"Votre commande ne contient pas la {}. Veuillez sélectionner une pizza déjà présente dans votre commande.".format(pizza_to_modify)}
+
 @app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
     return make_response(jsonify(results()))
