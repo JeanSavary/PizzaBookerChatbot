@@ -136,9 +136,28 @@ def results():
     # --- GetPizzaInfo intent section
 
     elif req.get('queryResult').get('intent').get('displayName') == 'GetPizzaInfo': 
-        return
+        
+        req_parameters = req.get('queryResult').get('parameters')
+        req_output_contexts = req.get('queryResult').get('outputContexts')[0].get('parameters')
 
-# create a route for webhook
+        req_is_pizza = len(req_parameters.get('meals')) == 0
+        print(req_is_pizza)
+
+        if req_is_pizza : 
+            if req_output_contexts.get('pizza-type.original')[0] in ['pizza', 'pizzas'] :
+                return {'fulfillmentText': u'Oui biensûr ! Nous sommes spécialisés dans les pizzas 🍕Souhaitez-vous commander ?'}
+            
+            else :
+                pizza_type = req_output_contexts.get('pizza-type.original')[0]
+                print(' '.join(map(lambda x : x.capitalize() , pizza_type.split())))
+        else :
+            return {'fulfillmentText': u'Malheureusement nous ne faisons pas ce type de plat ! Cependant, nous sommes spécialisés dans la confection de délicieuses pizzas !🍕Souhaitez-vous commander ?'}
+
+    # --- PizzaModification intent section
+
+    # to do : update du dictionnaire order, afin de tenir compte des modifications d'ingrédients
+        
+
 @app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
     return make_response(jsonify(results()))
@@ -146,3 +165,5 @@ def webhook():
 # Run the app
 if __name__ == '__main__':
     app.run(debug=True)
+
+    #curl -X POST -H ': ' -H 'Content-Type: application/json' -d '{"responseId":"e6b8e926-a90c-4e12-87db-934f604933f1-dd2bbea9","queryResult":{"queryText":"Faites vous des pizzas 4 fromages","parameters":{"pizza-type":["pizzas 4 fromages"],"question":["Faites vous"],"number":"","meals":[]},"allRequiredParamsPresent":true,"outputContexts":[{"name":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6/contexts/getpizzainfo-followup","lifespanCount":2,"parameters":{"question":["Faites vous"],"question.original":["Faites vous"],"meals":[],"meals.original":[],"number":"","number.original":"","pizza-type":["pizzas 4 fromages"],"pizza-type.original":["pizzas 4 fromages"]}},{"name":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6/contexts/initial-customer-needs","lifespanCount":4,"parameters":{"question":["Faites vous"],"question.original":["Faites vous"],"meals":[],"meals.original":[],"number":"","number.original":"","pizza-type":["pizzas 4 fromages"],"pizza-type.original":["pizzas 4 fromages"]}},{"name":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6/contexts/__system_counters__","parameters":{"no-input":0,"no-match":0,"pizza-type":["pizzas 4 fromages"],"pizza-type.original":["pizzas 4 fromages"],"question":["Faites vous"],"question.original":["Faites vous"],"number":"","number.original":"","meals":[],"meals.original":[]}}],"intent":{"name":"projects/imta-256108/agent/intents/226477a4-941d-4d7f-9766-ffe4517e4425","displayName":"GetPizzaInfo"},"intentDetectionConfidence":0.83716905,"languageCode":"fr"},"originalDetectIntentRequest":{"payload":{}},"session":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6"}' http://127.0.0.1:5000/webhook
