@@ -2,12 +2,16 @@ from flask import Flask, request, make_response, jsonify
 import pandas as pd 
 import numpy as np
 from copy import deepcopy
-from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client
+from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client,format_dict_booking
 
 app = Flask(__name__)
 DATA = pd.read_csv('data/pizzas.csv', sep = ';')
 
 order = {}  # dict which stores the order of the client. Pizza names as keys and quantity as values. If the ingredients of the pizza are modified, the name of the pizza will be modified 'pizza bougar sans fromage'
+
+
+
+
 
 
 def results():
@@ -159,6 +163,21 @@ def results():
                 print(' '.join(map(lambda x : x.capitalize() , pizza_type.split())))
         else :
             return {'fulfillmentText': u'Malheureusement nous ne faisons pas ce type de plat ! Cependant, nous sommes spécialisés dans la confection de délicieuses pizzas !🍕Souhaitez-vous commander ?'}
+    
+    # --- Booking
+
+    elif req.get('queryResult').get('intent').get('displayName') == 'Booking':
+        list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
+        list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
+        print("booking", list_pizza, list_quantity_pizza)
+        for i, pizza in enumerate(list_pizza):
+            order[pizza]=list_quantity_pizza[i]
+        print("order", order)
+        return {'fulfillmentText': u'Très bien, nous avons enregistré votre commande, qui est {}. Souhaitez-vous modifier la composition d\'une pizza ?'.format(format_dict_booking(order))}
+
+
+
+
 
     # --- PizzaModification intent section
 

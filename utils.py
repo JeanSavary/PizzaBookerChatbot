@@ -48,6 +48,35 @@ def creation_df_bool_presence(col,list_elements, df, conjonction='addition'):
     print("df_return", df_return)
     return(df_return)
 
+def format_dict_booking(dict_order):
+    """This function converts the dictionary (order) into a string which will be displayed when the client books a command
+    dict_order : dictionary of the client's order, like {'carbonar':4, 'bougar':2}
+    """
+    text = ""
+    length = len(dict_order.keys())
+    list_length = [i for i in range(length)]
+    keys = list(dict_order.keys())
+    values = list(dict_order.values())
+    for i, key, value in zip(list_length, keys, values):
+        if length == 0 :  #normally this case shouldn t occur
+            return ('')
+
+        elif i == length-1 and value==1:  # end of the dic so add nothing at the end of the sentence (already a point in the fulfilment), value==1 means no 's' at the end of the key
+            text = text + str(int(value))+' '+key
+        elif i == length-1 and value>=2:  # end of the dic so add nothing at the end of the sentence (already a point in the fulfilment), case several so we add a 's'
+            text = text + str(int(value))+' '+key+'s'
+
+        elif length>=2 and i==length-2 and value==1:  #case there are several keys (pizzas) and we are at the second last element of the dic, we add "et"
+            text = text + str(int(value)) +' '+ key +' et '
+        elif length>=2 and i==length-2 and value>=2:  #case there are several keys (pizzas) and we are at the second last element of the dic, we add "et"
+            text = text + str(int(value)) +' '+ key +'s et '
+
+        elif length>=2 and i<=length-2 and value==1:
+            text = text + str(int(value)) +' '+ key +', '
+        elif length>=2 and i<=length-2 and value>=2:
+            text = text + str(int(value)) +' '+ key +'s, '
+    return (text)
+
 def select_bool_column(df_bool, df_data, col_data, bool):
     """ This function takes a df_bool (dataframe, one column with boolean values) and return the list of the values of a selected 
      column of an other dataframe where the row is True in df_bool
@@ -70,3 +99,5 @@ def format_list_for_message_client(list_data):
     list_data_string = list_data_string.replace('\'','')
     list_data_string = list_data_string.replace('\"','')
     return (str(list_data_string))
+
+
