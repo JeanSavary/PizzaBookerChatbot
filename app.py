@@ -228,7 +228,6 @@ def results():
         order = {}
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
         list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
-        
         for i, pizza in enumerate(list_pizza):
             db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
             order[db_pizza_name] = int(list_quantity_pizza[i])
