@@ -2,7 +2,7 @@ from flask import Flask, request, make_response, jsonify
 import pandas as pd 
 import numpy as np
 from copy import deepcopy
-from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name, format_dict_booking
+from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name
 
 app = Flask(__name__)
 DATA = pd.read_csv('data/pizzas.csv', sep = ';')
@@ -180,6 +180,8 @@ def results():
         ingredient_to_add = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
         pizza_to_modify = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
 
+        print(pizza_to_modify, ingredient_to_remove)
+
         pizza_to_modify = search_by_name(DATA, pizza_to_modify).name.tolist()[0]
 
         try :
@@ -191,14 +193,11 @@ def results():
 
             print('Modification applied : {}'.format(order))
 
-            return {'fulfillmentText': u"Votre modification a bien été appliquée. Souhaitez-vous modifier la composition d'une autre pizza (si oui précisez le type de modification, le nom de la pizza et l'ingrédient en question) ou bien passer à la validation de votre commande."}
+            return {'fulfillmentText': u"Vous venez de modifier une {}. Souhaitez-vous modifier la composition d'une autre pizza (si oui précisez le type de modification, le nom de la pizza et l'ingrédient en question) ou bien passer à la validation de votre commande.".format(pizza_to_modify)}
 
         except :
             return {'fulfillmentText': u"Votre commande ne contient pas la {}. Veuillez sélectionner une pizza déjà présente dans votre commande.".format(pizza_to_modify)}
         
-    # to do : update du dictionnaire order, afin de tenir compte des modifications d'ingrédients
-    
-
     # --- RemoveIngredients intent section
     
     elif req.get('queryResult').get('intent').get('displayName') == 'RemoveIngredients':
@@ -206,8 +205,13 @@ def results():
         ingredient_to_remove = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
         pizza_to_modify = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
 
+        print(pizza_to_modify, ingredient_to_remove)
+
         pizza_to_modify = search_by_name(DATA, pizza_to_modify).name.tolist()[0]
-    
+
+        print(pizza_to_modify.strip()  == 'Pizza Royale')
+        print(order)
+
         try :
             order[pizza_to_modify] -= 1
             if order[pizza_to_modify] == 0 :
@@ -217,7 +221,7 @@ def results():
 
             print('Modification applied : {}'.format(order))
 
-            return {'fulfillmentText': u"Votre modification a bien été appliquée. Souhaitez-vous modifier la composition d'une autre pizza (si oui précisez le type de modification, le nom de la pizza et l'ingrédient en question) ou bien passer à la validation de votre commande."}
+            return {'fulfillmentText': u"Vous venez de modifier une {}. Souhaitez-vous modifier la composition d'une autre pizza (si oui précisez le type de modification, le nom de la pizza et l'ingrédient en question) ou bien passer à la validation de votre commande.".format(pizza_to_modify)}
 
         except :
             return {'fulfillmentText': u"Votre commande ne contient pas la {}. Veuillez sélectionner une pizza déjà présente dans votre commande.".format(pizza_to_modify)}
