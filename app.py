@@ -32,25 +32,87 @@ def results():
     # --- GetPizzaWithIngredients intent section
 
     elif req.get('queryResult').get('intent').get('displayName') == 'GetPizzaWithIngredients': 
-        try:
+        try :
             is_remover = req.get('queryResult').get('parameters').get('ingredient-modification')[0]   # several values ('avec', 'sans', 'enlever', 'ajouter') just the two first values are useful here
         except : 
             is_remover = "avec"
         ingredients = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
         quantity = req.get('queryResult').get('parameters').get('quantity') #string, not required entity, possible values : 'singulier', 'pluriel'
         list_pizza = []  # list of pizzas which will match to the request (with/without ingredients)
-        
+        gout = req.get('queryResult').get('parameters').get('gouts')
+        print("gout", gout)
         if len(quantity)==0:  # case the quantity hasn't been tagged by dialogflow, it is set to plurial automatically
             quantity = ["pluriel"]
         
-        if is_remover=='avec' : 
-            if len(ingredients) == 1: #just for one ingredient
+        elif ingredients == [] and gout ==[] : # So the client asks without specifing the ingredients ("quelles sont vos pizzas") so we reply with a list
+            return {'fulfillmentText': u'Je n\'ai pas très bien compris sur quel ingrédient portait votre question. Nous avons différents types de pizzas : des pizzas avec de la viande comme la Carbonara ou la Royale; des pizzas végétariennes comme la\
+                                        Pizza aux Artichauts ou encore des pizzas sucrées, notamment la Pizza Petite Fermière. Souhaitez-vous commander ?'}
+        
+        elif ingredients==[] and len(gout)==1 :  # if the client asks for a taste, like 'quelles sont vos pizzas sucrées ?'
+            df_bool = creation_df_bool_presence('ingredients',gout, DATA)
+            list_pizza = select_bool_column(df_bool, DATA, 'name', True) # call the function which 
+            
+            if len(list_pizza)==0 :
+                return {'fulfillmentText': u'Nous n\'avons pas de pizza comme vous avez demandé. Mais nous faisons différents types de pizzas avec de la viande (Royale, Carbonara), végétariennes (Pizza Hawaïenne) ou encore sucrées (Petite Fermière). Souhaitez-vous commander ?'}
+
+            elif quantity[0] =='singulier' and len(list_pizza)>=1:  #client wants to know just one pizza with the ingredient
+                random_pizza = np.random.randint(0, len(list_pizza)) #random int to not always have the first pizzas returned 
+                return {'fulfillmentText': u'La {} est {}. Souhaitez-vous commander ?'.format(list_pizza[random_pizza], gout[0])}
+
+            elif len(list_pizza)==1 and quantity[0]=='pluriel': #just one pizza whereas the client asks for several pizzas
+                return {'fulfillmentText': u'Nous avons uniquement la pizza {} qui est {}.\nSouhaitez-vous commander ?'.format(list_pizza[0], gout[0])}
+
+            elif quantity[0] =='pluriel' and len(list_pizza)>=2:
+                return {'fulfillmentText': u'Les pizzas {} sont {}. \nSouhaitez-vous commander ?'.format(gout[0]+'s', format_list_for_message_client(list_pizza))}
+                
+        elif ingredients==[] and len(gout)>=2: #if the client asks for several tastes like 'pizzas sucrées et végétariennes'
+            return {'fulfillmentText': u'N\'en demandez pas trop d\'un coup ! Choississez une seule caractéristique.'}
+
+
+        elif len(ingredients)==1 and len(gout)==1 :  # if the client asks for a taste, like 'quelles sont vos pizzas sucrées ?'
+            if is_remover=='avec' :
+                df_bool = creation_df_bool_presence('ingredients',gout+ingredients, DATA)  
+                list_pizza = select_bool_column(df_bool, DATA, 'name', True) # call the function which 
+                
+                if len(list_pizza)==0 :
+                    return {'fulfillmentText': u'Nous n\'avons pas de pizza comme vous avez demandé. Mais nous faisons différents types de pizzas avec de la viande (Royale, Carbonara), végétariennes (Pizza Hawaïenne) ou encore sucrées (Petite Fermière). Souhaitez-vous commander ?'}
+
+                elif quantity[0] =='singulier' and len(list_pizza)>=1:  #client wants to know just one pizza with the ingredient
+                    random_pizza = np.random.randint(0, len(list_pizza)) #random int to not always have the first pizzas returned 
+                    return {'fulfillmentText': u'La {} est {} avec l\'ingrédient {}. Souhaitez-vous commander ?'.format(list_pizza[random_pizza], gout[0], ingredients[0])}
+
+                elif len(list_pizza)==1 and quantity[0]=='pluriel': #just one pizza whereas the client asks for several pizzas
+                    return {'fulfillmentText': u'Nous avons uniquement la pizza {} qui est {} avec l\'ingrédient {}.\nSouhaitez-vous commander ?'.format(list_pizza[0], gout[0], ingredients[0])}
+
+                elif quantity[0] =='pluriel' and len(list_pizza)>=2:
+                    return {'fulfillmentText': u'Les pizzas qui sont {} avec l\'ingrédient {} sont {}. \nSouhaitez-vous commander ?'.format(gout[0]+'s', ingredients[0], format_list_for_message_client(list_pizza))}
+                    
+            elif is_remover=='sans' :
+                df_bool = creation_df_bool_presence('ingredients',gout+ingredients, DATA)  #concat the 2 lists
+                list_pizza = select_bool_column(df_bool, DATA, 'name', True) # call the function which 
+                
+                if len(list_pizza)==0 :
+                    return {'fulfillmentText': u'Nous n\'avons pas de pizza comme vous avez demandé. Mais nous faisons différents types de pizzas avec de la viande (Royale, Carbonara), végétariennes (Pizza Hawaïenne) ou encore sucrées (Petite Fermière). Souhaitez-vous commander ?'}
+
+                elif quantity[0] =='singulier' and len(list_pizza)>=1:  #client wants to know just one pizza with the ingredient
+                    random_pizza = np.random.randint(0, len(list_pizza)) #random int to not always have the first pizzas returned 
+                    return {'fulfillmentText': u'La {} est {} et sans l\'ingrédient {}. Souhaitez-vous commander ?'.format(list_pizza[random_pizza], gout[0], ingredients[0])}
+
+                elif len(list_pizza)==1 and quantity[0]=='pluriel': #just one pizza whereas the client asks for several pizzas
+                    return {'fulfillmentText': u'Nous avons uniquement la pizza {} qui est {} sans l\'ingrédient {}.\nSouhaitez-vous commander ?'.format(list_pizza[0], gout[0], ingredients[0])}
+
+                elif quantity[0] =='pluriel' and len(list_pizza)>=2:
+                    return {'fulfillmentText': u'Les pizzas qui sont {} sans l\'ingrédient {} sont {}. \nSouhaitez-vous commander ?'.format(gout[0]+'s', ingredients[0], format_list_for_message_client(list_pizza))}
+                            
+
+        elif is_remover=='avec' and gout==[] : 
+            if len(ingredients) == 1 : #just for one ingredient
 
                 df_bool = creation_df_bool_presence('ingredients',ingredients, DATA)
                 list_pizza = select_bool_column(df_bool, DATA, 'name', True) # call the function which 
                 
                 if len(list_pizza)==0 :
-                    return {'fulfillmentText': u'Nous n\'avons pas de pizza avec l\'ingrédient demandé. Mais nous faisons différents types de pizzas, souhaitez-vous commander ?'}
+                    return {'fulfillmentText': u'Nous n\'avons pas de pizza avec l\'ingrédient demandé, mais nous faisons différents types de pizzas, par exemple avec de la viande (Royale, Carbonara), végétariennes (Pizza Hawaïenne) ou encore sucrées (Petite Fermière). Souhaitez-vous commander ?'}
 
                 elif quantity[0] =='singulier' and len(list_pizza)>=1:  #client wants to know just one pizza with the ingredient
                     random_pizza = np.random.randint(0, len(list_pizza)) #random int to not always have the first pizzas returned 
@@ -99,7 +161,7 @@ def results():
                     elif quantity[0]=='pluriel' and len(list_pizza)>=2:
                         return {'fulfillmentText': u'Les pizzas avec au moins un des ingrédients {} sont {}. Souhaitez-vous commander ?'.format(format_list_for_message_client(ingredients), format_list_for_message_client(list_pizza))}
 
-        elif is_remover=='sans' :  #the client wants to know if there is pizza(s) without ingredient(s)
+        elif is_remover=='sans' and gout==[] :  #the client wants to know if there is pizza(s) without ingredient(s)
             if len(ingredients)==1: #just for one ingredient
 
                 df_bool = creation_df_bool_presence('ingredients',ingredients, DATA)
@@ -166,13 +228,33 @@ def results():
         order = {}
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
         list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
-        
-        for i, pizza in enumerate(list_pizza):
-            db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
-            order[db_pizza_name] = int(list_quantity_pizza[i])
+        unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
+        print("booking", list_pizza, list_quantity_pizza)
+
+        #if the client doesn't specify the pizza name, we need to ask him
+        if "pizza" in list_pizza or "pizzas" in list_pizza or "Pizza" in list_pizza or"Pizzas" in list_pizza or "calzones" in list_pizza or "calzone" in list_pizza :
             
-        print("order", order)
-        return {'fulfillmentText': u'Très bien, nous avons enregistré votre commande, qui est {}. Souhaitez-vous modifier la composition de pizza(s) ?'.format(format_dict_booking(order))}
+            ## "je veux commander 3 pizzas" or "je veux commander des pizzas" so we need to know the names of the pizzas and the number of each pizza-type
+            if (len(list_quantity_pizza)>=1 and list_quantity_pizza[0]>1) or (len(list_quantity_pizza)==0 and unknown_quantity=='pluriel'): 
+                return {'fulfillmentText': u'Très bien, quelles pizzas voulez ?'}
+
+            # "je veux commander 1 pizza" so we need to know the names of the pizzas
+            elif len(list_quantity_pizza)>=1 and list_quantity_pizza[0]==1: 
+                return {'fulfillmentText': u'Très bien, quelle pizza voulez commander?'}
+        
+        #if the client just asks "je veux commander"
+        elif len(list_pizza)==0 and len(list_quantity_pizza)==0:
+            return {'fulfillmentText': u'Très bien, quelle sera votre commande ?'}
+
+        #if the client has well specified the name of the pizza, we search them in the database
+        else:
+            for i, pizza in enumerate(list_pizza):
+                db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
+                print("jean", db_pizza_name)
+                order[db_pizza_name] = int(list_quantity_pizza[i])
+                
+            print("order", order)
+            return {'fulfillmentText': u'Très bien, nous avons enregistré votre commande, qui est {}. Souhaitez-vous modifier la composition de pizza(s) ?'.format(format_dict_booking(order))}
 
     # --- AddIngredients intent section
 
@@ -180,7 +262,7 @@ def results():
         ingredient_to_add = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
         pizza_to_modify = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
 
-        print(pizza_to_modify, ingredient_to_remove)
+        print(pizza_to_modify, ingredient_to_add)
 
         pizza_to_modify = search_by_name(DATA, pizza_to_modify).name.tolist()[0]
 
@@ -225,6 +307,20 @@ def results():
 
         except :
             return {'fulfillmentText': u"Votre commande ne contient pas la {}. Veuillez sélectionner une pizza déjà présente dans votre commande.".format(pizza_to_modify)}
+
+    # --- BookingValidation
+
+    elif req.get('queryResult').get('intent').get('displayName') == 'BookingValidation':
+
+        return {'fulfillmentText': u"Votre commande actuelle est : {}. Voulez-vous la valider ? ".format(format_dict_booking(order))}
+
+
+
+
+
+
+
+
 
 @app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
