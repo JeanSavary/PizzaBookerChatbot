@@ -2,7 +2,7 @@ from flask import Flask, request, make_response, jsonify
 import pandas as pd 
 import numpy as np
 from copy import deepcopy
-from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name, bool_pizza_in_list_pizza
+from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name, bool_pizza_in_list_pizza, set_plurial_singular
 
 app = Flask(__name__)
 DATA = pd.read_csv('data/pizzas.csv', sep = ';')
@@ -229,7 +229,7 @@ def results():
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
         list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
         unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
-    
+
         #if the client doesn't specify the pizza name, we need to ask him
         if bool_pizza_in_list_pizza(list_pizza)==True : 
             
@@ -242,21 +242,36 @@ def results():
                 return {'fulfillmentText': u'Très bien, quelle pizza voulez commander?'}
 
         #if the client just asks "je veux commander"
-        elif len(list_pizza)==0 and len(list_quantity_pizza)==0:
+        if len(list_pizza)==0 and len(list_quantity_pizza)==0:
             return {'fulfillmentText': u'Très bien, quelle sera votre commande ?'}
 
+        elif len(list_pizza)==0 and len(list_quantity_pizza)>=1: #if the clients forgets to specify the pizza name
+            return {'fulfillmentText': u'Pardon, je n\'ai pas bien compris, quelle pizza et combien en voulez-vous ?'}
+
+        elif len(list_pizza)>=1 and len(list_quantity_pizza)==0: #if the clients forgets to specify the quantity
+            if len(list_pizza)==1 and unknown_quantity=='singulier':
+                list_quantity_pizza=[1]
+            else:
+                return {'fulfillmentText': u'Pardon, je n\'ai pas bien compris, quelle pizza et combien en voulez-vous ?'}
+        
         #if the client has well specified the name of the pizza, we search them in the database
-        else:
+        if len(list_pizza)==len(list_quantity_pizza):
             for i, pizza in enumerate(list_pizza):
                 try :
                     db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
-                    order[db_pizza_name] = int(list_quantity_pizza[i])
+                    if list_quantity_pizza[i]>=1: #to avoid float or negative number
+                        order[db_pizza_name] = int(list_quantity_pizza[i])
+                    else :
+                        return {'fulfillmentText': u'Veuillez entrer un nombre entier compris entre 1 et le nombre de pizzas que vous êtes capable de manger !'}
 
                 except : 
                     return {'fulfillmentText': u'Veuillez vous assurer que le(s) nom(s) des éléments de votre commande sont corrects. Essayez de nouveau !'}
                 
             print("Order", order)
             return {'fulfillmentText': u'Très bien, nous avons enregistré votre commande, qui est {}. Souhaitez-vous modifier la composition de pizza(s) ?'.format(format_dict_booking(order))}
+            
+        elif len(list_pizza)!=len(list_quantity_pizza): #not the same size of the lists
+            return {'fulfillmentText': u'Pardon mais je n\'ai pas très bien compris votre commande. Pouvez-vous répéter ?'}
 
     # --- AddIngredients intent section
 
@@ -315,56 +330,133 @@ def results():
 
     elif req.get('queryResult').get('intent').get('displayName') == 'AddPizza':
         
+        modified_order = deepcopy(order) #copy of the order, this allows to not modify the order if it fails during the process 
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
-        print("add pizza", list_pizza)
-        if bool_pizza_in_list_pizza(list_pizza)==True : #if the client doesn't specify the name of the pizza "je veux enlever une pizza"
-            return {'fulfillmentText' : u'Quelle pizza souhaitez-vous ajouter ?'}
-        else:    
-            if len(list_pizza)>=2 : 
-                return {'fulfillmentText': u'Vous ne pouvez ajouter qu\'une pizza par une pizza, n\'allez pas trop vite !'}
-            elif len(list_pizza)==0:
-                return {'fulfillmentText': u'Quelle est le nom de la pizza que vous voulez ajouter ?'}
-            elif len(list_pizza)==1:
-                pizza = list_pizza[0]
+        list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
+        unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
+
+        print("add pizza", len(list_pizza), list_pizza, list_quantity_pizza)
+
+        if bool_pizza_in_list_pizza(list_pizza)==True : #if the client doesn't specify the name of the pizza "je veux ajouter une pizza"
+            print("pas le nom")
+            # "je veux ajouter 1 pizza" or "je veux ajouter la pizza" so we need to know the names of the pizzas
+            if (len(list_quantity_pizza)>=1 and list_quantity_pizza[0]==1) or (len(list_quantity_pizza)==0 and unknown_quantity=='singulier') : 
+                return {'fulfillmentText' : u'Quelle pizza souhaitez-vous ajouter ?'}
+
+            ## "je veux ajouter 3 pizzas"  so we need to know the names of the pizzas and the number 
+            else: 
+                return {'fulfillmentText': u'Très bien, quelles pizzas voulez-vous ajouter ?'}
+
+        elif len(list_pizza)>=1 and len(list_quantity_pizza)==0: #if the clients forgets to specify the quantity
+            if len(list_pizza)==1 and unknown_quantity=='singulier':
+                list_quantity_pizza=[1]
+            else:
+                return {'fulfillmentText': u'Pardon, je n\'ai pas bien compris, quelle pizza et combien en voulez-vous ?'}
+            
+        #"je veux ajouter 1 " forgets to add the pizza name
+        elif len(list_pizza)==0 and (len(list_quantity_pizza)<=1 or unknown_quantity=='singulier' or (len(list_quantity_pizza)!=0 and list_quantity_pizza[0]==1)): #add a pizza (just ONE)
+            return {'fulfillmentText': u'Quelle est le nom de la pizza que vous voulez ajouter ?'}
+            
+        #"je veux ajouter des" forgets to add the pizza name
+        elif len(list_pizza)==0 and (len(list_quantity_pizza)>=2 or unknown_quantity=='pluriel' or (len(list_quantity_pizza)!=0 and list_quantity_pizza[0]>=2)): #add several pizzas
+            return {'fulfillmentText': u'Quelles sont les pizza que vous voulez ajouter ?'}
+
+
+        elif len(list_pizza)==len(list_quantity_pizza) and len(list_pizza)>=1: # need to have the same length so a quantity for each pizza
+
+            for i, pizza in enumerate(list_pizza) :
+                quantity = list_quantity_pizza[i]
                 try :
                     db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
-                    order[db_pizza_name] = 1
+                    if db_pizza_name in modified_order.keys():
+                        if list_quantity_pizza[i]>=1 : #to avoid negative number
+                            modified_order[db_pizza_name] += int(list_quantity_pizza[i])
+                        else : 
+                            return {'fulfillmentText': u'Veuillez rentrer un nombre entier entre 1 et le nombre de pizzas que vous pouvez manger !'}
+                    else :
+                        if list_quantity_pizza[i]>=1 : #to avoid negative number
+                            modified_order[db_pizza_name] = int(list_quantity_pizza[i])
+                        else : 
+                            return {'fulfillmentText': u'Veuillez rentrer un nombre entier entre 1 et le nombre de pizzas que vous pouvez manger !'}
                 except : 
                     return {'fulfillmentText': u'Veuillez vous assurer que le nom de la pizza est correct. Essayez de nouveau !'}
+            
+            #it has worked
+            order = deepcopy(modified_order)
+            return {'fulfillmentText': u'Très bien, nous avons mis à jour votre commande qui est donc : {}. Souhaitez-vous modifier la composition d\'une pizza ?'.format(format_dict_booking(order))}
+            
+        elif len(list_pizza)!=len(list_quantity_pizza):  
+            return {'fulfillmentText': u'Nous avons du mal à comprendre la quantité de pizzas que vous voulez ajouter. Pouvez-vous être plus explicit ?'}
 
-                return {'fulfillmentText': u'Très bien, nous avons ajouté la {} à votre commande qui est donc : {}. Souhaitez-vous modifier la composition de la pizza ?'.format(format_list_for_message_client(list_pizza), format_dict_booking(order))}
+
 
 # --- RemovePizza
 
     elif req.get('queryResult').get('intent').get('displayName') == 'RemovePizza':
         
+        modified_order = deepcopy(order)
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
+        list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
+        unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
 
-        if len(list_pizza)>=2 : 
-            return {'fulfillmentText': u'Vous ne pouvez supprimer qu\'une pizza par une pizza, n\'allez pas trop vite !'}
+        if bool_pizza_in_list_pizza(list_pizza)==True : #if the client doesn't specify the name of the pizza "je veux retirer une pizza"
+            
+            ## "je veux retirer 1 pizza"  so we need to know the name of the pizza and the number 
+            if (len(list_quantity_pizza)>=1 and list_quantity_pizza[0]==1) or (len(list_quantity_pizza)==0 and unknown_quantity=='singulier') : 
+                return {'fulfillmentText' : u'Quelle pizza souhaitez-vous retirer ?'}
 
-        elif len(list_pizza)==0:
-            return {'fulfillmentText': u'Quelle est le nom de la pizza que vous voulez supprimer ?'}
+            ## "je veux ajouter 3 pizzas"  so we need to know the names of the pizzas and the number 
+            else: 
+                return {'fulfillmentText': u'Très bien, quelles pizzas voulez-vous retirer ?'}
+        
+        elif len(list_pizza)>=1 and len(list_quantity_pizza)==0: #if the clients forgets to specify the quantity
+            if len(list_pizza)==1 and unknown_quantity=='singulier':
+                list_quantity_pizza=[1]
+            else:
+                return {'fulfillmentText': u'Pardon, je n\'ai pas bien compris, quelle pizza et combien voulez-vous en retirer ?'}
 
-        elif len(list_pizza)==1:
-            pizza = list_pizza[0]
-            try :
-                db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
+        #"je veux retirer 1 " forgets to add the pizza name
+        elif len(list_pizza)==0 and (len(list_quantity_pizza)<=1 or unknown_quantity=='singulier' or (len(list_quantity_pizza)!=0 and list_quantity_pizza[0]==1)): #add a pizza (just ONE)
+            return {'fulfillmentText': u'Quelle est le nom de la pizza que vous voulez retirer ?'}
+            
+        #"je veux retirer des" forgets to add the pizza name
+        elif len(list_pizza)==0 and (len(list_quantity_pizza)>=2 or unknown_quantity=='pluriel' or (len(list_quantity_pizza)!=0 and list_quantity_pizza[0]>=2)): #add several pizzas
+            return {'fulfillmentText': u'Quelles sont les pizza que vous voulez enlever ?'}
 
-                if db_pizza_name in order.keys():
-                    if order[db_pizza_name]>=2:   # several pizzas of this type in the order so we decrease of 1
-                        order[db_pizza_name] -= 1
+        elif len(list_pizza)==len(list_quantity_pizza) and len(list_pizza)>=1:
+            
+            for i, pizza in enumerate(list_pizza) :
+                quantity = list_quantity_pizza[i]
+                try :
+                    db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
 
-                    elif order[db_pizza_name]==1:  #just one pizza of this type in the order so we delete this pizza of the order
-                        del order[db_pizza_name]
+                    if db_pizza_name in modified_order.keys():  #if the pizza is in the order
 
-                elif db_pizza_name not in order.keys():
-                    return {'fulfillmentText': u'La {} n\'est pas dans votre commande. Votre commande actuelle est : {}. Souhaitez-vous valider cette commande ? '.format(format_list_for_message_client(list_pizza), format_dict_booking(order))}
+                        if  list_quantity_pizza[i]>=1: # if the quantity to remove is positive,  to avoid 0 or negative numbers
 
-            except : 
-                return {'fulfillmentText': u'Veuillez vous assurer que le nom de la pizza est correct. Essayez de nouveau !'}
+                            if list_quantity_pizza[i]>modified_order[db_pizza_name] or modified_order[db_pizza_name]-list_quantity_pizza[i]==0: #the client asks to delete more pizzas than he ordered so we just set it to 0
+                                del modified_order[db_pizza_name]
+                                
+                            elif modified_order[db_pizza_name] - list_quantity_pizza[i] >=1:   # several pizzas of this type in the order so we decrease the order
+                                modified_order[db_pizza_name] -= list_quantity_pizza[i]
+                            
+                        else : #number is not good (negative or float)
+                            return {'fulfillmentText': u'Veuillez entrer un nombre entier.'}
 
-            return {'fulfillmentText': u'Très bien, nous avons retiré la {} de votre commande qui est donc : {}. Souhaitez-vous la valider ?'.format(format_list_for_message_client(list_pizza), format_dict_booking(order))}
+                    elif db_pizza_name not in modified_order.keys():
+                        return {'fulfillmentText': u'La {} n\'est pas dans votre commande. Votre commande actuelle est : {}. Souhaitez-vous valider cette commande ? '.format(db_pizza_name, format_dict_booking(order))}
+
+                except : 
+                    return {'fulfillmentText': u'Veuillez vous assurer que le nom de la pizza est correct. Essayez de nouveau !'}
+
+            #it has worked
+            order = deepcopy(modified_order)
+            return {'fulfillmentText': u'Très bien, nous avons mis à jour votre commande qui est donc : {}. Souhaitez-vous la valider ?'.format(format_dict_booking(order))}
+
+        elif len(list_pizza)!=len(list_quantity_pizza):  
+            return {'fulfillmentText': u'Nous avons du mal à comprendre les pizzas que vous voulez supprimer. Pouvez-vous répéter plus explicitement ?'}
+
+                
 
  
 
