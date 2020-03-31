@@ -117,21 +117,48 @@ def format_list_for_message_client(list_data):
 
 def search_by_name(pizza_data, input_text):
  
-    regex_pizza = r'(pizza(s)?\s)'
-    regex_quatres = r'quatre(s)?'
+    def regex_builder(token) :
 
-    processed_input_text = re.sub(regex_pizza, '', input_text) #remove all unnecessary words to better search pizza names in our dataset
-    processed_input_text = re.sub(regex_quatres, '4', processed_input_text) #transform words "quatre" and "quatres" to 4
-    processed_input_text = processed_input_text if processed_input_text[-1] != 's' else processed_input_text[:-1]
+        # Here we consider that for a word containing at least 2 characters, users won't misswrite it
+        if len(token) <= 2 :
+            return r"(\b{token}\b)".format(token = token)
+        
+        # Here we consider that for a word containing 3 characters exactly, the most common error will be to forget the last character
+        elif len(token) == 3 :
+            return r"(\b{token}?\b)".format(token = token)
 
-    print(processed_input_text)
-    
-    if processed_input_text.lower() == 'calzone' :
-        return None
+        # For all other words, we consider that users could possibly forget the last character, or write it twice or forget an "s"
+        elif len(token) > 3:
+            return r"(\b{token}?[s{last_token_character}]{{0,2}}\b)".format(token = token, last_token_character = token[-1])
 
-    res_df = pizza_data[pizza_data.name.apply(lambda name : unidecode(processed_input_text.lower()) in unidecode(name.lower()))]
-    
-    return res_df
+    # --- Normalize the input_text before searching into db
+
+    pizza_regex = re.compile(r'(pizza(s)?\s)')
+    quatre_regex = re.compile(r'quatre(s)?')
+
+    normalized_input_text = unidecode(input_text.lower())
+
+    processed_input_text = re.sub(pizza_regex, '', normalized_input_text) # Remove all unnecessary words to better search pizza names in our dataset
+    processed_input_text = re.sub(quatre_regex, '4', processed_input_text) # Transform words "quatre" and "quatres" to 4
+
+    # --- Process search into db 
+
+    # create a dynamic regex depending on the input text, which will take into account plural versions of words 
+    search_regex = r'|'.join(map(lambda token : regex_builder(token), processed_input_text.split()))
+
+    res_df = pizza_data.name.apply(lambda name : len(re.findall(search_regex, unidecode(name.lower()))))
+    res_df = res_df[res_df == res_df.max()]
+
+    # --- Errors management
+
+    if len(res_df) > 1 :
+        return None, 400
+
+    elif len(res_df) == 0 :
+        return None, 404
+
+    else :
+        return pizza_data.loc[res_df.index.values[0],:].to_dict(), 200
 
 def bool_pizza_in_list_pizza(list_pizza):
     """
@@ -147,4 +174,29 @@ if __name__ == "__main__":
     
     DATA = pd.read_csv('data/pizzas.csv', sep = ';')
 
-    print('Result for : "Calzone prosciutto"' , search_by_name(DATA,"Calzone prosciutto"))
+    test_input_1 = 'Calzone prosciutto'
+    test_input_2 = 'Pizza bacon'
+    test_input_3 = 'Pizza aux artichauts'
+    test_input_4 = 'Fausse Pizza'
+    test_input_5 = 'Pizza quatre fromage'
+    test_input_6 = 'Une savoyarde'
+    test_input_7 = 'Pizza des prairies'
+    test_input_8 = 'Calzone'
+    test_input_9 = "Pizza air d'italie"
+
+    tests = [test_input_1, test_input_2, test_input_3, test_input_4, test_input_5, test_input_6, test_input_7, test_input_8, test_input_9]
+
+    for test in tests : 
+
+        result, code = search_by_name(DATA, test)
+        
+        if code == 200 :
+            print('\nResult for {test} : \n\t{result}'.format(test = test, result = result['name']))
+
+        elif code == 400 : 
+            print("\nResult for {test} :".format(test = test))
+            print("\tPlusieurs pizzas correspondent à votre recherche, veuillez spécifier votre demande")
+
+        else :
+            print("\nResult for {test} :".format(test = test))
+            print("\tAucune pizza ne correspond à votre recherche. Asssurez vous que la pizza apparaisse sur notre carte, ou que vous avez bien orthographié son nom. Essayez de nouveau.")
