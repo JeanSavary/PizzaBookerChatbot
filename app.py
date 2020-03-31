@@ -228,7 +228,7 @@ def results():
         order = {}
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
         list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
-        unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
+        unknown_quantity = req.get('queryResult').get('parameters').get('quantity') #normally not used
         print("booking", list_pizza, list_quantity_pizza)
 
         #if the client doesn't specify the pizza name, we need to ask him
@@ -239,9 +239,9 @@ def results():
                 return {'fulfillmentText': u'Très bien, quelles pizzas voulez ?'}
 
             # "je veux commander 1 pizza" so we need to know the names of the pizzas
-            elif len(list_quantity_pizza)>=1 and list_quantity_pizza[0]==1: 
+            elif (len(list_quantity_pizza)>=1 and list_quantity_pizza[0]==1) or ( len(list_quantity_pizza)==0 and unknown_quantity=='singulier'): 
                 return {'fulfillmentText': u'Très bien, quelle pizza voulez commander?'}
-        
+
         #if the client just asks "je veux commander"
         elif len(list_pizza)==0 and len(list_quantity_pizza)==0:
             return {'fulfillmentText': u'Très bien, quelle sera votre commande ?'}
