@@ -110,10 +110,10 @@ def search_by_name(pizza_data, input_text):
     processed_input_text = re.sub(regex_quatres, '4', processed_input_text) #transform words "quatre" and "quatres" to 4
     processed_input_text = processed_input_text if processed_input_text[-1] != 's' else processed_input_text[:-1]
 
+    print(processed_input_text)
+    
     if processed_input_text.lower() == 'calzone' :
         return None
-
-    print(processed_input_text)
 
     res_df = pizza_data[pizza_data.name.apply(lambda name : unidecode(processed_input_text.lower()) in unidecode(name.lower()))]
     

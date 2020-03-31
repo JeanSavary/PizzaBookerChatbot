@@ -229,18 +229,17 @@ def results():
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
         list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
         unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
-        print("booking", list_pizza, list_quantity_pizza)
-
+    
         #if the client doesn't specify the pizza name, we need to ask him
         if "pizza" in list_pizza or "pizzas" in list_pizza or "Pizza" in list_pizza or"Pizzas" in list_pizza or "calzones" in list_pizza or "calzone" in list_pizza :
             
             ## "je veux commander 3 pizzas" or "je veux commander des pizzas" so we need to know the names of the pizzas and the number of each pizza-type
             if (len(list_quantity_pizza)>=1 and list_quantity_pizza[0]>1) or (len(list_quantity_pizza)==0 and unknown_quantity=='pluriel'): 
-                return {'fulfillmentText': u'Très bien, quelles pizzas voulez ?'}
+                return {'fulfillmentText': u'Très bien, quelles pizzas voulez-vous ?'}
 
             # "je veux commander 1 pizza" so we need to know the names of the pizzas
             elif len(list_quantity_pizza)>=1 and list_quantity_pizza[0]==1: 
-                return {'fulfillmentText': u'Très bien, quelle pizza voulez commander?'}
+                return {'fulfillmentText': u'Très bien, quelle pizza voulez-vous commander?'}
         
         #if the client just asks "je veux commander"
         elif len(list_pizza)==0 and len(list_quantity_pizza)==0:
@@ -249,7 +248,6 @@ def results():
         #if the client has well specified the name of the pizza, we search them in the database
         else:
             for i, pizza in enumerate(list_pizza):
-                
                 try :
                     db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
                     order[db_pizza_name] = int(list_quantity_pizza[i])
@@ -291,8 +289,6 @@ def results():
         ingredient_to_remove = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
         pizza_to_modify = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
 
-        print(pizza_to_modify, ingredient_to_remove)
-
         pizza_to_modify = search_by_name(DATA, pizza_to_modify).name.tolist()[0]
 
         try :
@@ -300,7 +296,7 @@ def results():
             if order[pizza_to_modify] == 0 :
                 del order[pizza_to_modify]
 
-            order[pizza_to_modify + ' sans %s'%ingredient_to_add] = 1
+            order[pizza_to_modify + ' sans %s'%ingredient_to_remove] = 1
 
             print('Modification applied : {}'.format(order))
 
