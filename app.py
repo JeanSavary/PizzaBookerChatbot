@@ -229,18 +229,17 @@ def results():
         list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
         list_quantity_pizza = req.get('queryResult').get('parameters').get('number')
         unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
-        print("booking", list_pizza, list_quantity_pizza)
-
+    
         #if the client doesn't specify the pizza name, we need to ask him
         if "pizza" in list_pizza or "pizzas" in list_pizza or "Pizza" in list_pizza or"Pizzas" in list_pizza or "calzones" in list_pizza or "calzone" in list_pizza :
             
             ## "je veux commander 3 pizzas" or "je veux commander des pizzas" so we need to know the names of the pizzas and the number of each pizza-type
             if (len(list_quantity_pizza)>=1 and list_quantity_pizza[0]>1) or (len(list_quantity_pizza)==0 and unknown_quantity=='pluriel'): 
-                return {'fulfillmentText': u'Très bien, quelles pizzas voulez ?'}
+                return {'fulfillmentText': u'Très bien, quelles pizzas voulez-vous ?'}
 
             # "je veux commander 1 pizza" so we need to know the names of the pizzas
             elif len(list_quantity_pizza)>=1 and list_quantity_pizza[0]==1: 
-                return {'fulfillmentText': u'Très bien, quelle pizza voulez commander?'}
+                return {'fulfillmentText': u'Très bien, quelle pizza voulez-vous commander?'}
         
         #if the client just asks "je veux commander"
         elif len(list_pizza)==0 and len(list_quantity_pizza)==0:
@@ -249,11 +248,14 @@ def results():
         #if the client has well specified the name of the pizza, we search them in the database
         else:
             for i, pizza in enumerate(list_pizza):
-                db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
-                print("jean", db_pizza_name)
-                order[db_pizza_name] = int(list_quantity_pizza[i])
+                try :
+                    db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
+                    order[db_pizza_name] = int(list_quantity_pizza[i])
+
+                except : 
+                    return {'fulfillmentText': u'Veuillez vous assurer que le(s) nom(s) des éléments de votre commande sont corrects. Essayez de nouveau !'}
                 
-            print("order", order)
+            print("Order", order)
             return {'fulfillmentText': u'Très bien, nous avons enregistré votre commande, qui est {}. Souhaitez-vous modifier la composition de pizza(s) ?'.format(format_dict_booking(order))}
 
     # --- AddIngredients intent section
@@ -287,19 +289,14 @@ def results():
         ingredient_to_remove = req.get('queryResult').get('outputContexts')[0].get('parameters').get('ingredients.original')
         pizza_to_modify = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
 
-        print(pizza_to_modify, ingredient_to_remove)
-
         pizza_to_modify = search_by_name(DATA, pizza_to_modify).name.tolist()[0]
-
-        print(pizza_to_modify.strip()  == 'Pizza Royale')
-        print(order)
 
         try :
             order[pizza_to_modify] -= 1
             if order[pizza_to_modify] == 0 :
                 del order[pizza_to_modify]
 
-            order[pizza_to_modify + ' sans %s'%ingredient_to_add] = 1
+            order[pizza_to_modify + ' sans %s'%ingredient_to_remove] = 1
 
             print('Modification applied : {}'.format(order))
 
@@ -329,5 +326,3 @@ def webhook():
 # Run the app
 if __name__ == '__main__':
     app.run(debug=True)
-    
-    #curl -X POST -H ': ' -H 'Content-Type: application/json' -d '{"responseId":"e6b8e926-a90c-4e12-87db-934f604933f1-dd2bbea9","queryResult":{"queryText":"Faites vous des pizzas 4 fromages","parameters":{"pizza-type":["pizzas 4 fromages"],"question":["Faites vous"],"number":"","meals":[]},"allRequiredParamsPresent":true,"outputContexts":[{"name":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6/contexts/getpizzainfo-followup","lifespanCount":2,"parameters":{"question":["Faites vous"],"question.original":["Faites vous"],"meals":[],"meals.original":[],"number":"","number.original":"","pizza-type":["pizzas 4 fromages"],"pizza-type.original":["pizzas 4 fromages"]}},{"name":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6/contexts/initial-customer-needs","lifespanCount":4,"parameters":{"question":["Faites vous"],"question.original":["Faites vous"],"meals":[],"meals.original":[],"number":"","number.original":"","pizza-type":["pizzas 4 fromages"],"pizza-type.original":["pizzas 4 fromages"]}},{"name":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6/contexts/__system_counters__","parameters":{"no-input":0,"no-match":0,"pizza-type":["pizzas 4 fromages"],"pizza-type.original":["pizzas 4 fromages"],"question":["Faites vous"],"question.original":["Faites vous"],"number":"","number.original":"","meals":[],"meals.original":[]}}],"intent":{"name":"projects/imta-256108/agent/intents/226477a4-941d-4d7f-9766-ffe4517e4425","displayName":"GetPizzaInfo"},"intentDetectionConfidence":0.83716905,"languageCode":"fr"},"originalDetectIntentRequest":{"payload":{}},"session":"projects/imta-256108/agent/sessions/0d91c908-c202-dd53-a51a-a6cccab52cc6"}' http://127.0.0.1:5000/webhook
