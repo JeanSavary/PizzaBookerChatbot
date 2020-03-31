@@ -5,4 +5,4 @@ Developed by :
 
 --- 
 
-Link to the chatbot [here](https://bot.dialogflow.com/360595b6-d27e-4d9a-8458-50a13fbf4864)
+Link to the chatbot [here](https://bot.dialogflow.com/360595b6-d27e-4d9a-8458-50a13fbf4864) (need to create an account on ngrok, and then launch a server via `./ngrok http http://127.0.0.1:5000` and launch the app via `python3 app.py` or `run app.py`
