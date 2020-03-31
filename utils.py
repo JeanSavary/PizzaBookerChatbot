@@ -78,6 +78,20 @@ def format_dict_booking(dict_order):
             text = text + str(int(value)) +' '+ key.split()[0] +'s '+format_list_for_message_client(key.split()[1:]).replace(',','')+', '
     return (text)
 
+def set_plurial_singular(element, quantity, is_pizza_name=False):
+    """element is a string (a noun), quantity an integer and is_pizza_name is True when the element is a pizza name in the database, False if not (common name like 'lardon')
+    This function doesn't take into consideration the composed names !
+    """
+    if quantity==1 :
+        return (element)
+    elif quantity>=2 and is_pizza_name==False:
+        if element[-1]=='s' or element[-1]=='x':
+            return element
+        else :  #this won't be good for hibou but not the pb here
+            return element+'s'
+    elif quantity>=2 and is_pizza_name==True:
+        return element.split()[0] +'s '+format_list_for_message_client(element.split()[1:]).replace(',','')
+
 def select_bool_column(df_bool, df_data, col_data, bool):
     """ This function takes a df_bool (dataframe, one column with boolean values) and return the list of the values of a selected 
      column of an other dataframe where the row is True in df_bool
@@ -145,6 +159,16 @@ def search_by_name(pizza_data, input_text):
 
     else :
         return pizza_data.loc[res_df.index.values[0],:].to_dict(), 200
+
+def bool_pizza_in_list_pizza(list_pizza):
+    """
+    This function tests if the client asked for a pizza without specifying the name of the pizza (or calzone)
+    It returns True if he hasn't, else False
+    """
+    if "pizza" in list_pizza or "pizzas" in list_pizza or "Pizza" in list_pizza or"Pizzas" in list_pizza or "calzones" in list_pizza or "calzone" in list_pizza :
+        return True
+    else :
+        return False    
 
 if __name__ == "__main__":
     
