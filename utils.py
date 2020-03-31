@@ -79,6 +79,7 @@ def format_dict_booking(dict_order):
     return (text)
 
 def set_plurial_singular(element, quantity, is_pizza_name=False):
+    #### DEPRECIATED ####
     """element is a string (a noun), quantity an integer and is_pizza_name is True when the element is a pizza name in the database, False if not (common name like 'lardon')
     This function doesn't take into consideration the composed names !
     """
@@ -116,7 +117,7 @@ def format_list_for_message_client(list_data):
     return (str(list_data_string))
 
 def search_by_name(pizza_data, input_text):
- 
+    
     def regex_builder(token) :
 
         # Here we consider that for a word containing at least 2 characters, users won't misswrite it
