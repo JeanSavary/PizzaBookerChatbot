@@ -2,7 +2,7 @@ from flask import Flask, request, make_response, jsonify
 import pandas as pd 
 import numpy as np
 from copy import deepcopy
-from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name
+from utils import creation_df_bool_presence, select_bool_column, pizza_without_ingredient, format_list_for_message_client, format_dict_booking, search_by_name, bool_pizza_in_list_pizza
 
 app = Flask(__name__)
 DATA = pd.read_csv('data/pizzas.csv', sep = ';')
@@ -231,7 +231,7 @@ def results():
         unknown_quantity = req.get('queryResult').get('parameters').get('quantity')
     
         #if the client doesn't specify the pizza name, we need to ask him
-        if "pizza" in list_pizza or "pizzas" in list_pizza or "Pizza" in list_pizza or"Pizzas" in list_pizza or "calzones" in list_pizza or "calzone" in list_pizza :
+        if bool_pizza_in_list_pizza(list_pizza)==True : 
             
             ## "je veux commander 3 pizzas" or "je veux commander des pizzas" so we need to know the names of the pizzas and the number of each pizza-type
             if (len(list_quantity_pizza)>=1 and list_quantity_pizza[0]>1) or (len(list_quantity_pizza)==0 and unknown_quantity=='pluriel'): 
@@ -311,13 +311,62 @@ def results():
 
         return {'fulfillmentText': u"Votre commande actuelle est : {}. Voulez-vous la valider ? ".format(format_dict_booking(order))}
 
+    # --- AddPizza
 
+    elif req.get('queryResult').get('intent').get('displayName') == 'AddPizza':
+        
+        list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
+        print("add pizza", list_pizza)
+        if bool_pizza_in_list_pizza(list_pizza)==True : #if the client doesn't specify the name of the pizza "je veux enlever une pizza"
+            return {'fulfillmentText' : u'Quelle pizza souhaitez-vous ajouter ?'}
+        else:    
+            if len(list_pizza)>=2 : 
+                return {'fulfillmentText': u'Vous ne pouvez ajouter qu\'une pizza par une pizza, n\'allez pas trop vite !'}
+            elif len(list_pizza)==0:
+                return {'fulfillmentText': u'Quelle est le nom de la pizza que vous voulez ajouter ?'}
+            elif len(list_pizza)==1:
+                pizza = list_pizza[0]
+                try :
+                    db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
+                    order[db_pizza_name] = 1
+                except : 
+                    return {'fulfillmentText': u'Veuillez vous assurer que le nom de la pizza est correct. Essayez de nouveau !'}
 
+                return {'fulfillmentText': u'Très bien, nous avons ajouté la {} à votre commande qui est donc : {}. Souhaitez-vous modifier la composition de la pizza ?'.format(format_list_for_message_client(list_pizza), format_dict_booking(order))}
 
+# --- RemovePizza
 
+    elif req.get('queryResult').get('intent').get('displayName') == 'RemovePizza':
+        
+        list_pizza = req.get('queryResult').get('outputContexts')[0].get('parameters').get('pizza-type.original')
 
+        if len(list_pizza)>=2 : 
+            return {'fulfillmentText': u'Vous ne pouvez supprimer qu\'une pizza par une pizza, n\'allez pas trop vite !'}
 
+        elif len(list_pizza)==0:
+            return {'fulfillmentText': u'Quelle est le nom de la pizza que vous voulez supprimer ?'}
 
+        elif len(list_pizza)==1:
+            pizza = list_pizza[0]
+            try :
+                db_pizza_name = search_by_name(DATA, pizza).name.tolist()[0]
+
+                if db_pizza_name in order.keys():
+                    if order[db_pizza_name]>=2:   # several pizzas of this type in the order so we decrease of 1
+                        order[db_pizza_name] -= 1
+
+                    elif order[db_pizza_name]==1:  #just one pizza of this type in the order so we delete this pizza of the order
+                        del order[db_pizza_name]
+
+                elif db_pizza_name not in order.keys():
+                    return {'fulfillmentText': u'La {} n\'est pas dans votre commande. Votre commande actuelle est : {}. Souhaitez-vous valider cette commande ? '.format(format_list_for_message_client(list_pizza), format_dict_booking(order))}
+
+            except : 
+                return {'fulfillmentText': u'Veuillez vous assurer que le nom de la pizza est correct. Essayez de nouveau !'}
+
+            return {'fulfillmentText': u'Très bien, nous avons retiré la {} de votre commande qui est donc : {}. Souhaitez-vous la valider ?'.format(format_list_for_message_client(list_pizza), format_dict_booking(order))}
+
+ 
 
 @app.route('/webhook', methods=['POST', 'GET'])
 def webhook():
