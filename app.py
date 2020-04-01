@@ -31,7 +31,7 @@ def results():
             db_pizza_name = db_pizza['name']
             db_pizza_ingredients = db_pizza['ingredients']
         
-            return {'fulfillmentText' : u"Les ingrédients de la {name} sont les suivants : {ingredients}. Souhaitez-vous la commandée ?".format(name = db_pizza_name, ingredients = db_pizza_ingredients)}
+            return {'fulfillmentText' : u"Les ingrédients de la {name} sont les suivants : {ingredients}. Souhaitez-vous la commander ?".format(name = db_pizza_name, ingredients = db_pizza_ingredients)}
 
     # --- GetPizzaWithIngredients intent section
 
